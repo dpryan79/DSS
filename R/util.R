@@ -1,3 +1,40 @@
+###############################################
+## DelayedMatrix stats functions
+##
+## Many operations on a DelayedMatrix object scale very poorly as its size increases. 
+## This can be combatted by computing the operations on chunks of the DelayedMatrix. 
+## The following functions facilitate that.
+##
+## A DelayedMatrix is processed in blocks of blockSize and then in parallel according to BPPARAM.
+###############################################
+block_mean <- function(m, na.rm=FALSE, blockSize=10000, BPPARAM=SerialParam()) {
+    # mean() is VERY slow on a large delayed matrix, but quick on subset
+    grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
+    means = unlist(blockApply(m, function(x) mean(x, na.rm=na.rm), grid=grid, BPPARAM=BPPARAM))
+    if(na.rm) {
+        ns = unlist(blockApply(m, function(x) sum(!is.na(x)), grid=grid, BPPARAM=BPPARAM))
+    } else {
+        ns = length(m)
+    }
+    # weighted mean
+    return(sum(means * (ns/sum(ns))))
+}
+
+block_rowMeans <- function(m, blockSize=10000, BPPARAM=SerialParam()) {
+    grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
+    return(unlist(blockApply(m, rowMeans, grid=grid, BPPARAM=BPPARAM)))
+}
+
+block_rowSums <- function(m, blockSize=10000, BPPARAM=SerialParam()) {
+    grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
+    return(unlist(blockApply(m, rowSums, grid=grid, BPPARAM=BPPARAM)))
+}
+
+block_rowVars <- function(m, blockSize=10000, BPPARAM=SerialParam()) {
+    grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
+    return(unlist(blockApply(m, rowVars, grid=grid, BPPARAM=BPPARAM)))
+}
+
 ### some utility functions
 ## variance of each row
 rowVars <- function(x) {

@@ -86,16 +86,16 @@ getBSseqIndex <- function(sName, group1, group2) {
 ######################################
 DMLtest.noSmooth <- function(BS1, BS2, equal.disp, BPPARAM) {
     ## grab counts
-    x1 <- as.array(getCoverage(BS1, type="M"))
-    n1 <- as.array(getCoverage(BS1, type="Cov"))
-    x2 <- as.array(getCoverage(BS2, type="M"))
-    n2 <- as.array(getCoverage(BS2, type="Cov"))
+    x1 <- getCoverage(BS1, type="M")
+    n1 <- getCoverage(BS1, type="Cov")
+    x2 <- getCoverage(BS2, type="M")
+    n2 <- getCoverage(BS2, type="Cov")
     nreps1 <- ncol(x1)
     nreps2 <- ncol(x2)
 
     ## estimate means
-    estprob1 <- compute.mean.noSmooth(x1, n1)
-    estprob2 <- compute.mean.noSmooth(x2, n2)
+    estprob1 <- compute.mean.noSmooth(x1, n1, BPPARAM=BPPARAM)
+    estprob2 <- compute.mean.noSmooth(x2, n2, BPPARAM=BPPARAM)
 
     ## estimate dispersion
     ## - this part is slow. Could be computed parallely. Will implement later.
@@ -116,8 +116,8 @@ DMLtest.noSmooth <- function(BS1, BS2, equal.disp, BPPARAM) {
     n2.wt <- n2*wt2
 
     ## re-estimate means
-    estprob1 <- compute.mean.noSmooth(x1.wt, n1.wt)
-    estprob2 <- compute.mean.noSmooth(x2.wt, n2.wt)
+    estprob1 <- compute.mean.noSmooth(x1.wt, n1.wt, BPPARAM=BPPARAM)
+    estprob2 <- compute.mean.noSmooth(x2.wt, n2.wt, BPPARAM=BPPARAM)
 
     ## perform Wald test
     allchr <- as.character(seqnames(BS1))
@@ -134,10 +134,10 @@ DMLtest.noSmooth <- function(BS1, BS2, equal.disp, BPPARAM) {
 ######################################
 DMLtest.Smooth <- function(BS1, BS2, equal.disp, smoothing.span, BPPARAM) {
     ## grab counts
-    x1 <- as.array(getCoverage(BS1, type="M"))
-    n1 <- as.array(getCoverage(BS1, type="Cov"))
-    x2 <- as.array(getCoverage(BS2, type="M"))
-    n2 <- as.array(getCoverage(BS2, type="Cov"))
+    x1 <- getCoverage(BS1, type="M")
+    n1 <- getCoverage(BS1, type="Cov")
+    x2 <- getCoverage(BS2, type="M")
+    n2 <- getCoverage(BS2, type="Cov")
     nreps1 <- ncol(x1)
     nreps2 <- ncol(x2)
     allchr <- as.character(seqnames(BS1))
@@ -145,8 +145,8 @@ DMLtest.Smooth <- function(BS1, BS2, equal.disp, smoothing.span, BPPARAM) {
 
     ## Smoothing
     cat("Smoothing ...\n")
-    estprob1 <- compute.mean.Smooth(x1, n1, allchr, allpos, smoothing.span)
-    estprob2 <- compute.mean.Smooth(x2, n2, allchr, allpos, smoothing.span)
+    estprob1 <- compute.mean.Smooth(x1, n1, allchr, allpos, smoothing.span, BPPARAM=BPPARAM)
+    estprob2 <- compute.mean.Smooth(x2, n2, allchr, allpos, smoothing.span, BPPARAM=BPPARAM)
 
     ## estimate priors from counts
     cat("Estimating dispersion for each CpG site, this will take a while ...\n")
@@ -166,8 +166,8 @@ DMLtest.Smooth <- function(BS1, BS2, equal.disp, smoothing.span, BPPARAM) {
     n2.wt <- n2*wt2
 
     ## re-estimate means
-    estprob1 <- compute.mean.Smooth(x1.wt, n1.wt, allchr, allpos, smoothing.span)
-    estprob2 <- compute.mean.Smooth(x2.wt, n2.wt, allchr, allpos, smoothing.span)
+    estprob1 <- compute.mean.Smooth(x1.wt, n1.wt, allchr, allpos, smoothing.span, BPPARAM=BPPARAM)
+    estprob2 <- compute.mean.Smooth(x2.wt, n2.wt, allchr, allpos, smoothing.span, BPPARAM=BPPARAM)
 
     cat("Computing test statistics ...\n")
     wald <- waldTest.DML(x1.wt, n1.wt, estprob1, phi1, x2.wt, n2.wt, estprob2, phi2,

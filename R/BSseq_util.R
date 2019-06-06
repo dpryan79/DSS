@@ -154,11 +154,11 @@ rowVars <- function (x, center = NULL, ...) {
 ## Just compute the percentage of methylation.
 ## adding a small constant could bring trouble when there's no coverage!!!
 ######################################################################################
-compute.mean.noSmooth <- function(X, N) {
+compute.mean.noSmooth <- function(X, N, blockSize=10000, BPPARAM=SerialParam()) {
     p <- X/N
     ##rowSums <- DelayedArray::rowSums
-    const <- mean(p, na.rm=TRUE)
-    p <- (rowSums(X)+const)/(rowSums(N)+1)
+    const <- block_mean(p, na.rm=TRUE, blockSize=blockSize, BPPARAM=BPPARAM)
+    p <- (block_rowSums(X, blockSize=blockSize, BPPARAM=BPPARAM)+const)/(block_rowSums(N, blockSize=blockSize, BPPARAM=BPPARAM)+1)
 
     nreps <-  ncol(N)
     res <- matrix(rep(p, nreps), ncol = nreps)
@@ -170,16 +170,14 @@ compute.mean.noSmooth <- function(X, N) {
 ## Currently it doesn't do anything except calling smooth.collapse.
 ## Might add things later.
 ######################################################################################
-compute.mean.Smooth <- function(X, N, allchr, allpos, ws=500) {
-    ## rowSums <- DelayedArray::rowSums
-
+compute.mean.Smooth <- function(X, N, allchr, allpos, ws=500, blockSize=10000, BPPARAM=SerialParam()) {
     ## collapse the replicates and smoothing
     nreps <-  ncol(N)
     p1 <- X / N
-    const <-  mean(p1, na.rm=TRUE) ##  small constant to be added
+    const <-  mean(p1, na.rm=TRUE, blockSize=blockSize, BPPARAM=BPPARAM) ##  small constant to be added
     if(nreps>1) { ## multiple replicate, collapse them. Add a small constant to bound away from 0/1
-        N <- rowSums(N)+1
-        X <- rowSums(X)+const
+        N <- block_rowSums(N, blockSize=blockSize, BPPARAM=BPPARAM)+1
+        X <- block_rowSums(X, blockSize=blockSize, BPPARAM=BPPARAM)+const
     } else {
         N <- N+0.4
         X <- X+0.4*const
@@ -237,9 +235,9 @@ smooth.collapse <- function(BS, method, ws, ...) {
 ########################################################################
 ## estimate dispersion for BS-seq data, given means
 ########################################################################
-est.dispersion.BSseq <- function(X, N, estprob, ncores) {
-    prior <- est.prior.BSseq.logN(X, N)
-    dispersion.shrinkage.BSseq(X, N, prior, estprob, ncores)
+est.dispersion.BSseq <- function(X, N, estprob, BPPARAM=SerialParam()) {
+    prior <- est.prior.BSseq.logN(X, N, BPPARAM)
+    dispersion.shrinkage.BSseq(X, N, prior, estprob, BPPARAM)
 }
 
 ########################################################################
@@ -249,7 +247,7 @@ est.dispersion.BSseq <- function(X, N, estprob, ncores) {
 ##
 ## For single rep data: will use logN(-3,1) as prior.
 ########################################################################
-est.prior.BSseq.logN <- function(X, N) {
+est.prior.BSseq.logN <- function(X, N, BPPARAM) {
     ## rowMeans = DelayedArray::rowMeans
     ## rowSums = DelayedArray::rowSums
 
@@ -257,7 +255,7 @@ est.prior.BSseq.logN <- function(X, N) {
         return(c(-3, 1))
 
     ## keep sites with large coverage and no missing data
-    ix=rowMeans(N>10)==1 & rowSums(N==0)==0
+    ix=block_rowMeans(N>10, BPPARAM=BPPARAM)==1 & block_rowSums(N==0, BPPARAM=BPPARAM)==0
     if(sum(ix) < 50) {
         warning("The coverages are too low. Cannot get good estimations of prior. Use arbitrary prior N(-3,1).")
         return(c(-3, 1))
@@ -266,10 +264,10 @@ est.prior.BSseq.logN <- function(X, N) {
     X=X[ix,,drop=FALSE]; N=N[ix,,drop=FALSE]
     ## compute sample mean/var
     p=X/N
-    mm=rowMeans(p)
+    mm=block_rowMeans(p, BPPARAM=BPPARAM)
     mm[mm==0]=1e-5
     mm[mm==1]=1-1e-5
-    vv=rowVars(p)
+    vv=block_rowVars(p, BPPARAM=BPPARAM)
     phi=vv/mm/(1-mm)
     ## exclude those with vv==0. Those are sites with unobservable phis.
     ## But this will over estimate the prior.
@@ -304,7 +302,7 @@ dispersion.shrinkage.BSseq <- function(X, N, prior, estprob, BPPARAM) {
         estprob <- as.matrix(estprob)
 
     ## skip those without coverage
-    ix <- rowSums(N>0) > 0
+    ix <- block_rowSums(N>0, BPPARAM=BPPARAM) > 0
     X2 <- X[ix, ,drop=FALSE]; N2 <- N[ix,,drop=FALSE]; estprob2 <- estprob[ix,,drop=FALSE]
     shrk.phi2 <- rep(0, nrow(X2))
 
