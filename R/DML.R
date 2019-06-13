@@ -183,14 +183,14 @@ DMLtest.Smooth <- function(BS1, BS2, equal.disp, smoothing.span, BPPARAM) {
 ## Perform Wald tests for calling DML
 ###############################################################################
 waldTest.DML <- function(x1,n1,estprob1, phi1, x2,n2, estprob2, phi2, smoothing,
-                         smoothing.span, allchr, allpos) {
+                         smoothing.span, allchr, allpos, BPPARAM=SerialParam()) {
 
     ## Wald test
     if(smoothing) {
         wald <- compute.waldStat.Smooth(estprob1[,1], estprob2[,1], n1, n2, phi1, phi2,
-                                        smoothing.span, allchr, allpos)
+                                        smoothing.span, allchr, allpos, BPPARAM)
     } else {
-        wald <- compute.waldStat.noSmooth(estprob1[,1], estprob2[,1], n1, n2, phi1, phi2)
+        wald <- compute.waldStat.noSmooth(estprob1[,1], estprob2[,1], n1, n2, phi1, phi2, BPPARAM)
     }
 
     ## combine with chr/pos and output
@@ -208,12 +208,12 @@ waldTest.DML <- function(x1,n1,estprob1, phi1, x2,n2, estprob2, phi2, smoothing,
 ###########################################################
 ## compute Wald test statistics when there's no smoothing
 ###########################################################
-compute.waldStat.noSmooth <- function(estprob1, estprob2, n1, n2, phi1, phi2) {
+compute.waldStat.noSmooth <- function(estprob1, estprob2, n1, n2, phi1, phi2, BPPARAM) {
     ##rowSums <- DelayedArray::rowSums
     dif <- estprob1 - estprob2
-    n1m <- rowSums(n1);    n2m <- rowSums(n2)
-    var1 <- rowSums(n1*estprob1*(1-estprob1)*(1+(n1-1)*phi1)) / (n1m)^2
-    var2 <- rowSums(n2*estprob2*(1-estprob2)*(1+(n2-1)*phi2)) / (n2m)^2
+    n1m <- rowSums(n1, BPPARAM=BPPARAM);    n2m <- rowSums(n2, BPPARAM=BPPARAM)
+    var1 <- rowSums(n1*estprob1*(1-estprob1)*(1+(n1-1)*phi1), BPPARAM=BPPARAM) / (n1m)^2
+    var2 <- rowSums(n2*estprob2*(1-estprob2)*(1+(n2-1)*phi2), BPPARAM=BPPARAM) / (n2m)^2
     ##vv <- var1/ncol1+var2/ncol2
     vv <- var1 + var2
     ## bound vv a little bit??
@@ -235,7 +235,7 @@ compute.waldStat.noSmooth <- function(estprob1, estprob2, n1, n2, phi1, phi2) {
 ## But does it make sense biologically???
 ###########################################################
 compute.waldStat.Smooth <- function(estprob1, estprob2, n1, n2, phi1, phi2, smoothing.span,
-                                    allchr, allpos) {
+                                    allchr, allpos, BPPARAM=BPPARAM) {
     dif <- estprob1 - estprob2
     ## compute variances for moving average values. This is tricky!
     var1 <- compute.var.Smooth(estprob1, n1, phi1, smoothing.span, allchr, allpos)

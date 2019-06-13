@@ -154,7 +154,7 @@ rowVars <- function (x, center = NULL, ...) {
 ## Just compute the percentage of methylation.
 ## adding a small constant could bring trouble when there's no coverage!!!
 ######################################################################################
-compute.mean.noSmooth <- function(X, N, blockSize=10000, BPPARAM=SerialParam()) {
+compute.mean.noSmooth <- function(X, N, blockSize=1000, BPPARAM=SerialParam()) {
     p <- X/N
     ##rowSums <- DelayedArray::rowSums
     const <- block_mean(p, na.rm=TRUE, blockSize=blockSize, BPPARAM=BPPARAM)
@@ -170,7 +170,7 @@ compute.mean.noSmooth <- function(X, N, blockSize=10000, BPPARAM=SerialParam()) 
 ## Currently it doesn't do anything except calling smooth.collapse.
 ## Might add things later.
 ######################################################################################
-compute.mean.Smooth <- function(X, N, allchr, allpos, ws=500, blockSize=10000, BPPARAM=SerialParam()) {
+compute.mean.Smooth <- function(X, N, allchr, allpos, ws=500, blockSize=1000, BPPARAM=SerialParam()) {
     ## collapse the replicates and smoothing
     nreps <-  ncol(N)
     p1 <- X / N
@@ -236,6 +236,9 @@ smooth.collapse <- function(BS, method, ws, ...) {
 ## estimate dispersion for BS-seq data, given means
 ########################################################################
 est.dispersion.BSseq <- function(X, N, estprob, BPPARAM=SerialParam()) {
+    if(blockSize * bpworkers(BPPARAM) < nrow(X)) {
+        blockSize = floor(nrow(X) / bpworkers(BPPARAM))
+    }
     prior <- est.prior.BSseq.logN(X, N, BPPARAM)
     dispersion.shrinkage.BSseq(X, N, prior, estprob, BPPARAM)
 }

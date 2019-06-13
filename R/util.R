@@ -7,7 +7,11 @@
 ##
 ## A DelayedMatrix is processed in blocks of blockSize and then in parallel according to BPPARAM.
 ###############################################
-block_mean <- function(m, na.rm=FALSE, blockSize=10000, BPPARAM=SerialParam()) {
+block_mean <- function(m, na.rm=FALSE, blockSize=1000, BPPARAM=SerialParam()) {
+    if(blockSize * bpworkers(BPPARAM) > nrow(m)) {
+        blockSize = floor(nrow(m) / bpworkers(BPPARAM))
+    }
+
     # mean() is VERY slow on a large delayed matrix, but quick on subset
     grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
     means = unlist(blockApply(m, function(x) mean(x, na.rm=na.rm), grid=grid, BPPARAM=BPPARAM))
@@ -20,17 +24,29 @@ block_mean <- function(m, na.rm=FALSE, blockSize=10000, BPPARAM=SerialParam()) {
     return(sum(means * (ns/sum(ns))))
 }
 
-block_rowMeans <- function(m, blockSize=10000, BPPARAM=SerialParam()) {
+block_rowMeans <- function(m, blockSize=1000, BPPARAM=SerialParam()) {
+    if(blockSize * bpworkers(BPPARAM) > nrow(m)) {
+        blockSize = floor(nrow(m) / bpworkers(BPPARAM))
+    }
+
     grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
     return(unlist(blockApply(m, rowMeans, grid=grid, BPPARAM=BPPARAM)))
 }
 
-block_rowSums <- function(m, blockSize=10000, BPPARAM=SerialParam()) {
+block_rowSums <- function(m, blockSize=1000, BPPARAM=SerialParam()) {
+    if(blockSize * bpworkers(BPPARAM) > nrow(m)) {
+        blockSize = floor(nrow(m) / bpworkers(BPPARAM))
+    }
+
     grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
     return(unlist(blockApply(m, rowSums, grid=grid, BPPARAM=BPPARAM)))
 }
 
-block_rowVars <- function(m, blockSize=10000, BPPARAM=SerialParam()) {
+block_rowVars <- function(m, blockSize=1000, BPPARAM=SerialParam()) {
+    if(blockSize * bpworkers(BPPARAM) > nrow(m)) {
+        blockSize = floor(nrow(m) / bpworkers(BPPARAM))
+    }
+
     grid = RegularArrayGrid(refdim=dim(m), spacings=c(blockSize, ncol(m)))
     return(unlist(blockApply(m, rowVars, grid=grid, BPPARAM=BPPARAM)))
 }

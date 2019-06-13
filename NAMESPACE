@@ -1,5 +1,6 @@
 import( Biobase )
 import( bsseq )
+import( BiocParallel )
 import(methods)
 useDynLib(DSS)
 exportClasses("SeqCountSet")
